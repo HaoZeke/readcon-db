@@ -16,8 +16,16 @@ root = pathlib.Path(sys.argv[1])
 cargo = tomllib.loads((root / "Cargo.toml").read_text())
 py = tomllib.loads((root / "python" / "pyproject.toml").read_text())
 version = cargo["package"]["version"]
-if py["project"]["version"] != version:
-    sys.exit(f"Cargo.toml has {version}, python/pyproject.toml has {py['project']['version']}")
+project = py["project"]
+static = project.get("version")
+dynamic = project.get("dynamic") or []
+if static is None:
+    if "version" not in dynamic:
+        sys.exit(
+            "python/pyproject.toml has no version and does not mark version as dynamic"
+        )
+elif static != version:
+    sys.exit(f"Cargo.toml has {version}, python/pyproject.toml has {static}")
 print(version, cargo["dependencies"]["readcon-core"])
 PY
 )"
