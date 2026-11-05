@@ -28,7 +28,7 @@ while IFS= read -r -d '' src; do
   rel="${src#"$ORG"/}"
   base="$(basename "$rel")"
   case "$base" in
-    readme.org|cooked-soa.org) continue ;;
+    readme.org) continue ;;
   esac
   dest="$OUT/${rel%.org}.rst"
   mkdir -p "$(dirname "$dest")"

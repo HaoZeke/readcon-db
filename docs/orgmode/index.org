@@ -99,6 +99,7 @@ Site map
    explanation/overview
    explanation/architecture
    explanation/design
+   cooked-soa
 
 .. toctree::
    :maxdepth: 1
