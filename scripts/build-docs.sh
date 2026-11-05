@@ -10,6 +10,19 @@ if ! command -v pandoc >/dev/null 2>&1; then
   exit 1
 fi
 
+versions="$(python3 - "$ROOT" <<'PY'
+import pathlib, sys, tomllib
+root = pathlib.Path(sys.argv[1])
+cargo = tomllib.loads((root / "Cargo.toml").read_text())
+py = tomllib.loads((root / "python" / "pyproject.toml").read_text())
+version = cargo["package"]["version"]
+if py["project"]["version"] != version:
+    sys.exit(f"Cargo.toml has {version}, python/pyproject.toml has {py['project']['version']}")
+print(version, cargo["dependencies"]["readcon-core"])
+PY
+)"
+read -r RCDB_VERSION CORE_REQ <<<"$versions"
+
 find "$OUT" -name '*.rst' -delete
 while IFS= read -r -d '' src; do
   rel="${src#"$ORG"/}"
@@ -19,7 +32,9 @@ while IFS= read -r -d '' src; do
   esac
   dest="$OUT/${rel%.org}.rst"
   mkdir -p "$(dirname "$dest")"
-  pandoc -f org -t rst --wrap=none "$src" -o "$dest"
+  sed -e "s/{{{readcon-db-version}}}/$RCDB_VERSION/g" \
+      -e "s/{{{readcon-core-req}}}/$CORE_REQ/g" "$src" |
+    pandoc -f org -t rst --wrap=none -o "$dest"
 done < <(find "$ORG" -name '*.org' -print0)
 
 python3 - "$OUT" <<'PY'
@@ -39,5 +54,10 @@ for path in root.rglob("*.rst"):
         out.append(line)
     path.write_text("\n".join(out) + "\n")
 PY
+
+if grep -rl '{{{readcon-' "$OUT" --include='*.rst'; then
+  echo "unknown {{{readcon-...}}} macro in the files above" >&2
+  exit 1
+fi
 
 sphinx-build -b html "$OUT" "$ROOT/docs/_build/html"
